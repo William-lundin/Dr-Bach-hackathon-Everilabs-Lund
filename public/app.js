@@ -9,7 +9,6 @@ const chatInput = document.querySelector("#chat-input");
 const sendButton = document.querySelector("#send-button");
 const waveform = document.querySelector("#waveform");
 const speechStatus = document.querySelector("#speech-status");
-const replayButton = document.querySelector("#replay-button");
 const toast = document.querySelector("#toast");
 const diagnosisForm = document.querySelector("#diagnosis-form");
 const diagnosisInput = document.querySelector("#diagnosis-input");
@@ -18,13 +17,18 @@ const result = document.querySelector("#result");
 
 const interviewDuration = 15 * 60;
 let sessionId;
-let patientOpening;
 let remainingSeconds = interviewDuration;
 let timerInterval;
 let toastTimeout;
-let lastPatientAudio;
-let currentAudio;
-let currentAudioUrl;
+let voiceSocket;
+let voiceReady = false;
+let microphoneStream;
+let audioContext;
+let microphoneSource;
+let captureNode;
+let silentOutput;
+let agentAudioSources = new Set();
+let scheduledAudioTime = 0;
 let requestPending = false;
 let phase = "file";
 
@@ -74,74 +78,215 @@ function setPatientStatus(message, mode = "") {
   document.querySelector(".wave-stage").classList.toggle("patient-speaking", mode === "speaking");
 }
 
-function stopCurrentAudio() {
-  if (!currentAudio) return;
-  currentAudio.pause();
-  currentAudio.removeAttribute("src");
-  if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
-  currentAudioUrl = undefined;
-  currentAudio = undefined;
+function stopAgentAudio() {
+  for (const source of agentAudioSources) {
+    source.onended = null;
+    source.stop();
+    source.disconnect();
+  }
+  agentAudioSources.clear();
+  scheduledAudioTime = 0;
 }
 
-async function playPatientAudio(audioBlob) {
-  stopCurrentAudio();
-  currentAudioUrl = URL.createObjectURL(audioBlob);
-  const audio = new Audio(currentAudioUrl);
-  currentAudio = audio;
-  setPatientStatus("Patient is speaking…", "speaking");
-  replayButton.disabled = true;
+function playAgentAudio(arrayBuffer) {
+  if (!audioContext || arrayBuffer.byteLength % 2 !== 0) return;
+  const pcm = new Int16Array(arrayBuffer);
+  const samples = new Float32Array(pcm.length);
+  for (let index = 0; index < pcm.length; index += 1) {
+    samples[index] = pcm[index] / (pcm[index] < 0 ? 32768 : 32767);
+  }
 
-  await new Promise((resolve) => {
-    let finished = false;
-    const finish = (status) => {
-      if (finished) return;
-      finished = true;
-      if (currentAudio === audio) {
-        currentAudio = undefined;
-        if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
-        currentAudioUrl = undefined;
+  const buffer = audioContext.createBuffer(1, samples.length, 24000);
+  buffer.copyToChannel(samples, 0);
+  const source = audioContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioContext.destination);
+  source.onended = () => {
+    agentAudioSources.delete(source);
+    source.disconnect();
+  };
+  const startAt = Math.max(audioContext.currentTime + 0.02, scheduledAudioTime);
+  source.start(startAt);
+  scheduledAudioTime = startAt + buffer.duration;
+  agentAudioSources.add(source);
+  setPatientStatus("Patient is speaking…", "speaking");
+}
+
+function startMicrophoneCapture() {
+  if (!microphoneStream || !audioContext || captureNode) return;
+  microphoneSource = audioContext.createMediaStreamSource(microphoneStream);
+  captureNode = new AudioWorkletNode(audioContext, "pcm16-capture", {
+    numberOfInputs: 1,
+    numberOfOutputs: 1,
+    channelCount: 1,
+    channelCountMode: "explicit",
+    outputChannelCount: [1],
+  });
+  silentOutput = audioContext.createGain();
+  silentOutput.gain.value = 0;
+  captureNode.port.onmessage = ({ data }) => {
+    if (
+      voiceReady &&
+      voiceSocket?.readyState === WebSocket.OPEN &&
+      voiceSocket.bufferedAmount < 256_000
+    ) {
+      voiceSocket.send(data);
+    }
+  };
+  microphoneSource.connect(captureNode);
+  captureNode.connect(silentOutput);
+  silentOutput.connect(audioContext.destination);
+}
+
+function handleVoiceEvent(event) {
+  if (event.type === "SettingsApplied") {
+    voiceReady = true;
+    startMicrophoneCapture();
+    setPatientStatus("Connected — speak naturally or type a message");
+    sendButton.disabled = false;
+    return;
+  }
+  if (event.type === "Error") {
+    const message = event.description || event.message || "Voice session failed.";
+    showError(message);
+    setPatientStatus("Voice session error");
+    if (!voiceReady) throw new Error(message);
+    return;
+  }
+  if (event.type === "Warning") {
+    const code = event.code ? `${event.code}: ` : "";
+    showError(`${code}${event.description || event.message || "Deepgram reported a warning."}`);
+    return;
+  }
+  if (event.type === "UserStartedSpeaking") {
+    stopAgentAudio();
+    setPatientStatus("Listening to you…", "thinking");
+    return;
+  }
+  if (event.type === "AgentThinking") {
+    setPatientStatus("Patient is thinking…", "thinking");
+    return;
+  }
+  if (event.type === "AgentStartedSpeaking") {
+    setPatientStatus("Patient is speaking…", "speaking");
+    return;
+  }
+  if (event.type === "ConversationText") {
+    if (event.role === "user") {
+      setPatientStatus(`You: ${event.content}`);
+    } else if (event.role === "assistant") {
+      setPatientStatus(`Patient: ${event.content}`);
+    }
+    return;
+  }
+  if (event.type === "AgentAudioDone") {
+    setPatientStatus("Listening — speak naturally or type a message");
+    sendButton.disabled = false;
+  }
+}
+
+async function startVoiceSession() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error("This browser does not support microphone access.");
+  }
+
+  microphoneStream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    },
+  });
+  audioContext = new AudioContext({ sampleRate: 16000 });
+  if (audioContext.sampleRate !== 16000) {
+    throw new Error("This browser could not open 16 kHz audio for the voice call.");
+  }
+  await audioContext.audioWorklet.addModule("/pcm-capture.js");
+  await audioContext.resume();
+
+  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+  const socketUrl = `${protocol}//${location.host}/api/voice?sessionId=${encodeURIComponent(sessionId)}`;
+  voiceSocket = new WebSocket(socketUrl);
+  voiceSocket.binaryType = "arraybuffer";
+
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(
+      () => reject(new Error("Timed out connecting to the voice agent.")),
+      20_000,
+    );
+    voiceSocket.addEventListener("message", (message) => {
+      if (typeof message.data !== "string") {
+        playAgentAudio(message.data);
+        return;
       }
+      let event;
+      try {
+        event = JSON.parse(message.data);
+      } catch {
+        clearTimeout(timeout);
+        reject(new Error("Received an invalid voice-agent event."));
+        return;
+      }
+      try {
+        handleVoiceEvent(event);
+      } catch (error) {
+        clearTimeout(timeout);
+        reject(error);
+        return;
+      }
+      if (event.type === "SettingsApplied") {
+        clearTimeout(timeout);
+        resolve();
+      }
+    });
+    voiceSocket.addEventListener("error", () => {
+      clearTimeout(timeout);
+      reject(new Error("Could not connect to the voice agent."));
+    });
+    voiceSocket.addEventListener("close", () => {
+      clearTimeout(timeout);
+      voiceReady = false;
       if (phase === "interview") {
-        setPatientStatus(status || "Your turn to ask", "");
-        sendButton.disabled = false;
-        replayButton.disabled = !lastPatientAudio;
+        setPatientStatus("Voice session disconnected");
       }
-      resolve();
-    };
-    audio.addEventListener("ended", () => finish(), { once: true });
-    audio.addEventListener("error", () => finish("Audio playback failed. Try replaying."), { once: true });
-    audio.play().catch(() => {
-      finish("Tap “Replay patient” to hear the response.");
-      replayButton.disabled = false;
+      reject(new Error("The voice-agent connection closed before setup completed."));
     });
   });
 }
 
-async function speakPatient(text) {
-  setPatientStatus("Preparing patient response…", "thinking");
-  replayButton.disabled = true;
-  sendButton.disabled = true;
-  try {
-    const response = await fetch("/api/speech", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Patient speech could not be generated.");
-    }
-    lastPatientAudio = await response.blob();
-    if (phase === "interview") await playPatientAudio(lastPatientAudio);
-  } catch (error) {
-    setPatientStatus("Patient audio unavailable", "");
-    sendButton.disabled = false;
-    replayButton.disabled = !lastPatientAudio;
-    showError(error.message);
+function stopVoiceSession() {
+  voiceReady = false;
+  stopAgentAudio();
+  if (captureNode) {
+    captureNode.port.onmessage = null;
+    captureNode.disconnect();
+    captureNode = undefined;
   }
+  if (microphoneSource) {
+    microphoneSource.disconnect();
+    microphoneSource = undefined;
+  }
+  if (silentOutput) {
+    silentOutput.disconnect();
+    silentOutput = undefined;
+  }
+  if (microphoneStream) {
+    for (const track of microphoneStream.getTracks()) track.stop();
+    microphoneStream = undefined;
+  }
+  if (audioContext) {
+    void audioContext.close();
+    audioContext = undefined;
+  }
+  if (voiceSocket && voiceSocket.readyState < WebSocket.CLOSING) {
+    voiceSocket.close(1000, "Interview ended");
+  }
+  voiceSocket = undefined;
 }
 
 async function loadCaseFile() {
+  stopVoiceSession();
   phase = "file";
   clearInterval(timerInterval);
   timerInterval = undefined;
@@ -158,14 +303,9 @@ async function loadCaseFile() {
   diagnosisForm.classList.remove("hidden");
   result.replaceChildren();
   result.classList.add("hidden");
-  lastPatientAudio = undefined;
-  stopCurrentAudio();
-  replayButton.disabled = true;
-
   try {
     const data = await requestJson("/api/sessions", {});
     sessionId = data.sessionId;
-    patientOpening = data.patient.opening;
     document.querySelector("#patient-name").textContent = data.patient.name;
     document.querySelector("#patient-age").textContent = data.patient.age
       ? `${data.patient.age} years`
@@ -192,7 +332,7 @@ async function loadCaseFile() {
   }
 }
 
-function beginInterview() {
+async function beginInterview() {
   if (!sessionId || phase !== "file") return;
   phase = "interview";
   caseScreen.classList.add("hidden");
@@ -202,14 +342,28 @@ function beginInterview() {
   document.querySelector("#encounter-title").textContent = "Your consultation";
   remainingSeconds = interviewDuration;
   updateTimer();
+  sendButton.disabled = true;
+  setPatientStatus("Connecting to the voice agent…", "thinking");
+
+  try {
+    await startVoiceSession();
+  } catch (error) {
+    stopVoiceSession();
+    phase = "file";
+    encounterScreen.classList.add("hidden");
+    timerChip.classList.add("hidden");
+    caseScreen.classList.remove("hidden");
+    seePatientButton.disabled = false;
+    setPatientStatus("Ready when you are");
+    showError(error.message);
+    return;
+  }
+
   timerInterval = setInterval(() => {
     remainingSeconds -= 1;
     updateTimer();
-    if (remainingSeconds <= 0) {
-      finishInterview(true);
-    }
+    if (remainingSeconds <= 0) finishInterview(true);
   }, 1000);
-  speakPatient(patientOpening);
 }
 
 function finishInterview(timeExpired = false) {
@@ -217,7 +371,7 @@ function finishInterview(timeExpired = false) {
   phase = "diagnosis";
   clearInterval(timerInterval);
   timerInterval = undefined;
-  stopCurrentAudio();
+  stopVoiceSession();
   timerChip.classList.add("hidden");
   encounterScreen.classList.add("hidden");
   caseScreen.classList.add("hidden");
@@ -237,15 +391,16 @@ async function submitQuestion(event) {
   chatInput.value = "";
   chatInput.style.height = "auto";
   sendButton.disabled = true;
-  replayButton.disabled = true;
-  setPatientStatus("Patient is thinking…", "thinking");
   try {
-    const data = await requestJson("/api/chat", { sessionId, message });
-    if (phase === "interview") await speakPatient(data.reply);
+    if (!voiceReady || voiceSocket?.readyState !== WebSocket.OPEN) {
+      throw new Error("The voice agent is not connected. Start a new interview and try again.");
+    }
+    stopAgentAudio();
+    voiceSocket.send(JSON.stringify({ type: "InjectUserMessage", content: message }));
+    setPatientStatus("Sending your message…", "thinking");
   } catch (error) {
     setPatientStatus("Ready when you are", "");
     sendButton.disabled = false;
-    replayButton.disabled = !lastPatientAudio;
     showError(error.message);
   } finally {
     requestPending = false;
@@ -313,11 +468,6 @@ chatInput.addEventListener("keydown", (event) => {
 chatInput.addEventListener("input", () => {
   chatInput.style.height = "auto";
   chatInput.style.height = `${Math.min(chatInput.scrollHeight, 110)}px`;
-});
-replayButton.addEventListener("click", () => {
-  if (lastPatientAudio && phase === "interview" && !requestPending) {
-    playPatientAudio(lastPatientAudio);
-  }
 });
 seePatientButton.addEventListener("click", beginInterview);
 document.querySelector("#diagnose-finish").addEventListener("click", () => finishInterview());

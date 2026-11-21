@@ -75,7 +75,7 @@
         </div>
 
         <div class="file-footer">
-          <p><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg> You will have <strong>15 minutes</strong> with the patient. Their responses are audio-only.</p>
+          <p><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg> You will have <strong>15 minutes</strong> with the patient. Allow microphone access to speak naturally.</p>
           <button class="primary-button" id="see-patient" type="button" disabled>
             See patient
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7" /></svg>
@@ -100,20 +100,16 @@
             <div class="wave-orb"><span class="orb-core"></span><span class="orb-halo"></span></div>
             <div class="waveform" id="waveform" aria-hidden="true"></div>
             <p class="speech-status" id="speech-status">Ready when you are</p>
-            <button class="replay-button" id="replay-button" type="button" disabled>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 1-2.34-5.66M20 4v7h-7" /></svg>
-              Replay patient
-            </button>
           </div>
-          <label class="sr-only" for="chat-input">Ask the patient a question</label>
+          <label class="sr-only" for="chat-input">Type a message to the patient</label>
           <div class="question-composer">
-            <textarea id="chat-input" rows="1" maxlength="2000" placeholder="Ask the patient a question…" required></textarea>
+            <textarea id="chat-input" rows="1" maxlength="2000" placeholder="Or type a message…" required></textarea>
             <button class="send-button" id="send-button" type="submit" aria-label="Send question">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7" /></svg>
             </button>
           </div>
         </form>
-        <div class="composer-hint">Use Wispr Flow to dictate <span>·</span> Enter to ask <span>·</span> Shift + Enter for a new line</div>
+        <div class="composer-hint">Speak naturally; audio is streamed during the interview <span>·</span> Enter to send typed messages <span>·</span> Shift + Enter for a new line</div>
       </section>
 
       <aside class="encounter-side">

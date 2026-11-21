@@ -9,42 +9,43 @@ case-specific feedback.
 Requires Node.js 20.6 or newer.
 
 ```sh
-export ANTHROPIC_API_KEY="your-anthropic-api-key"
+# Create .env.local in the repository root and add:
+# ANTHROPIC_API_KEY=your-anthropic-key
+# DEEPGRAM_API_KEY=your-deepgram-key
 npm start
 ```
 
 Open [http://localhost:3000](http://localhost:3000). Model credentials are read
-only by the server; do not put provider keys in browser code or commit them.
-`ANTHROPIC_API_KEY` is required for Claude patient replies. Install and sign in
-to [Wispr Flow](https://wisprflow.ai) on the student's device, then use its
-configured shortcut while the chat field is focused to dictate. The ElevenLabs
-onboarding flow stores `ELEVENLABS_API_KEY` in the ignored `.env.local` file,
-which the start script loads automatically. If a model credential is missing,
-the related action returns a visible setup error instead of silently
-substituting simulated output.
+by the server; never put provider keys in browser code or commit them.
+`ANTHROPIC_API_KEY` and `DEEPGRAM_API_KEY` are both required for voice calls.
+The `start` script loads `.env.local`.
 
 ## AI structure
 
-- **Patient conversation model** — `src/providers.js` calls Anthropic's
-  Messages API with `claude-haiku-5-5` by default. Override with
-  `PATIENT_CHAT_MODEL`. If generated profiles exist in `data/patients`, the
-  server selects one for each new session and sends its full patient-role
-  prompt to Claude; otherwise it uses the built-in sample case. The selected
-  profile and server-maintained interview history provide patient continuity.
-  Set `ANTHROPIC_BASE_URL` to use a compatible Anthropic endpoint.
-- **Patient speech model** — the separate `/api/speech` endpoint uses the
-  ElevenLabs JavaScript SDK to synthesize each reply. It defaults to
-  `eleven_flash_v2_5` and voice `JBFqnCBsd6RMkjVDRZzb`; override them with
-  `ELEVENLABS_MODEL_ID` and `ELEVENLABS_VOICE_ID`. The student can play speech
-  on demand using **Listen**; chat remains text-first.
-- **Student voice input** — focus the chat composer and use the Wispr Flow
-  desktop app's configured dictation shortcut. Wispr Flow inserts the recognized
-  text directly into the field; the student can review/edit it before sending.
-  The simulator does not capture or upload student audio.
+- **Continuous voice call** — the browser captures microphone audio with an
+  AudioWorklet and streams 16 kHz PCM over the same-origin `/api/voice`
+  WebSocket. The server relays it to Deepgram Voice Agent, then streams
+  24 kHz patient audio back. Deepgram Flux models handle transcription and
+  speech; the agent uses Anthropic as its reasoning provider. The default
+  models are `flux-general-en`, `flux-alexis-en`, and `claude-haiku-5-5`;
+  override them with `DEEPGRAM_STT_MODEL`, `DEEPGRAM_TTS_MODEL`, and
+  `PATIENT_CHAT_MODEL`.
+- **Patient role and continuity** — the server sends the selected case's full
+  patient-role prompt to the Voice Agent and records recognized user and
+  patient turns in the interview session. Generated profiles in
+  `data/patients` are selected for new sessions; otherwise the built-in sample
+  case is used. `ANTHROPIC_BASE_URL` can point to an Anthropic-compatible
+  Messages API endpoint.
+- **Credentials and data** — the Deepgram API key and Anthropic key stay out
+  of browser code. The Anthropic key is provided to Deepgram in the Voice
+  Agent's custom Anthropic endpoint configuration so the agent can call the
+  Messages API. The settings request Deepgram's `mip_opt_out` option. Audio,
+  transcripts, and case prompts are still sent to Deepgram and Anthropic to
+  operate the simulation; do not use real patient-identifying information.
 - **Session API** — `server.js` owns short-lived interview history and exposes
-  `POST /api/sessions`, `POST /api/chat`, `POST /api/speech`, and
-  `POST /api/diagnosis`. Notes remain in the
-  browser and are not included in patient prompts.
+  `POST /api/sessions`, `POST /api/chat` (text-only compatibility),
+  `WS /api/voice`, and `POST /api/diagnosis`. Notes remain in the browser and
+  are not included in patient prompts.
 - **Scoring** — `src/diagnostics.js` scores the submitted diagnosis and
   interview coverage against the built-in sample rubric. Dataset profiles
   score the submitted diagnosis against their extracted primary diagnosis;
@@ -52,19 +53,19 @@ substituting simulated output.
   validate case-specific rubrics before using dataset cases for formal
   assessment.
 
-Claude uses the Anthropic Messages API and patient speech uses the ElevenLabs
-SDK. Student dictation is provided by the Wispr Flow desktop application;
-there is no student-audio transcription API in the simulator. The UI and
-session API do not depend on a specific model vendor.
+Voice calls require microphone permission and a browser that supports
+AudioWorklet. The microphone stream is active for the duration of the
+interview; use headphones to reduce audio feedback. Typed messages are also
+sent through the same Voice Agent session.
 
 ## Interview flow
 
 1. Review the patient file: name, age, sex, reason for visit, and previous
    conditions.
-2. Select **See patient** to start the 15-minute encounter. The simulated
-   patient is heard through generated speech; the conversation is not displayed
-   as text. Use Wispr Flow to dictate questions into the question field and
-   keep private notes alongside the interview.
+2. Select **See patient** and allow microphone access to start the 15-minute
+   voice encounter. Speak naturally; the patient responds aloud and can be
+   interrupted. You can also type a message into the composer. Keep private
+   notes alongside the interview.
 3. Select **Diagnose & finish** (or wait for the timer) to enter a diagnosis and
    receive case feedback.
 

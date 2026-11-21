@@ -2,16 +2,17 @@ const http = require("node:http");
 const { randomUUID } = require("node:crypto");
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
+const { WebSocket, WebSocketServer } = require("ws");
 const { getCase, scoreDiagnosis } = require("./src/diagnostics");
 const { createPatientDataset } = require("./src/patient-dataset");
-const {
-  generatePatientReply,
-  synthesizeSpeech,
-} = require("./src/providers");
+const { generatePatientReply } = require("./src/providers");
+const { buildVoiceAgentConfiguration } = require("./src/deepgram-voice");
 
 const publicDirectory = path.join(__dirname, "public");
 const sessions = new Map();
 const getRandomPatientCase = createPatientDataset();
+const voiceServer = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
+const deepgramVoiceUrl = "wss://agent.deepgram.com/v1/agent/converse";
 const maxHistoryTurns = 24;
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -71,7 +72,9 @@ async function handleRequest(request, response) {
     sendJson(response, 200, {
       status: "ok",
       patientModelConfigured: Boolean(process.env.ANTHROPIC_API_KEY),
-      speechModelConfigured: Boolean(process.env.ELEVENLABS_API_KEY),
+      voiceAgentConfigured: Boolean(
+        process.env.DEEPGRAM_API_KEY && process.env.ANTHROPIC_API_KEY,
+      ),
     });
     return;
   }
@@ -125,25 +128,6 @@ async function handleRequest(request, response) {
     return;
   }
 
-  if (request.method === "POST" && url.pathname === "/api/speech") {
-    const body = await readJson(request);
-    if (typeof body.text !== "string" || !body.text.trim()) {
-      sendJson(response, 400, { error: "Speech text is required." });
-      return;
-    }
-    if (body.text.length > 2_000) {
-      sendJson(response, 400, { error: "Speech text must be 2,000 characters or fewer." });
-      return;
-    }
-    const audio = await synthesizeSpeech(body.text.trim());
-    response.writeHead(200, {
-      "Content-Type": "audio/mpeg",
-      "Cache-Control": "no-store",
-    });
-    response.end(audio);
-    return;
-  }
-
   if (request.method === "POST" && url.pathname === "/api/diagnosis") {
     const body = await readJson(request);
     const session = sessions.get(body.sessionId);
@@ -189,6 +173,170 @@ const server = http.createServer((request, response) => {
     } else {
       response.destroy(error);
     }
+  });
+});
+
+function sendVoiceError(socket, message) {
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ type: "Error", description: message }));
+    socket.close(1011, "Voice agent error");
+  }
+}
+
+function recordConversationText(session, event) {
+  if (
+    event.type !== "ConversationText" ||
+    !["user", "assistant"].includes(event.role) ||
+    typeof event.content !== "string" ||
+    !event.content.trim()
+  ) {
+    return;
+  }
+
+  const turn = { role: event.role, content: event.content.trim() };
+  const previous = session.history.at(-1);
+  if (previous?.role === turn.role && previous.content === turn.content) return;
+  session.history = [...session.history, turn].slice(-maxHistoryTurns);
+}
+
+voiceServer.on("connection", (client, request) => {
+  const url = new URL(request.url, "http://localhost");
+  const session = sessions.get(url.searchParams.get("sessionId"));
+  if (!session) {
+    sendVoiceError(client, "Interview session not found.");
+    return;
+  }
+
+  let configuration;
+  try {
+    configuration = buildVoiceAgentConfiguration(session.caseData);
+  } catch (error) {
+    sendVoiceError(client, error.message);
+    return;
+  }
+
+  const agent = new WebSocket(deepgramVoiceUrl, {
+    headers: { Authorization: `Token ${configuration.apiKey}` },
+    maxPayload: 1024 * 1024,
+  });
+  let settingsApplied = false;
+
+  agent.on("message", (data, isBinary) => {
+    if (!isBinary) {
+      let event;
+      try {
+        event = JSON.parse(data.toString());
+      } catch {
+        sendVoiceError(client, "Deepgram sent an invalid voice-agent message.");
+        agent.close();
+        return;
+      }
+
+      if (event.type === "Welcome") {
+        agent.send(JSON.stringify(configuration.settings));
+      } else if (event.type === "SettingsApplied") {
+        settingsApplied = true;
+      } else if (event.type === "ConversationText") {
+        recordConversationText(session, event);
+      } else if (event.type === "Error") {
+        console.error(
+          "Deepgram Voice Agent error:",
+          event.code || "UNKNOWN",
+          event.description || event.message,
+        );
+      } else if (event.type === "Warning") {
+        console.warn(
+          "Deepgram Voice Agent warning:",
+          event.code || "UNKNOWN",
+          event.description || event.message,
+        );
+      }
+    }
+
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(data, { binary: isBinary });
+    }
+  });
+
+  agent.on("error", () => {
+    sendVoiceError(
+      client,
+      "Could not connect to Deepgram Voice Agent. Check the Deepgram key and model settings.",
+    );
+  });
+
+  agent.on("close", (code) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.close(code === 1000 || code === 1001 ? code : 1011);
+    }
+  });
+
+  client.on("message", (data, isBinary) => {
+    if (agent.readyState !== WebSocket.OPEN || !settingsApplied) {
+      sendVoiceError(client, "Voice agent is not ready to receive input.");
+      return;
+    }
+    if (isBinary) {
+      agent.send(data, { binary: true });
+      return;
+    }
+
+    let message;
+    try {
+      message = JSON.parse(data.toString());
+    } catch {
+      sendVoiceError(client, "Voice input must be valid JSON.");
+      return;
+    }
+    if (
+      message.type !== "InjectUserMessage" ||
+      typeof message.content !== "string" ||
+      !message.content.trim() ||
+      message.content.length > 2_000
+    ) {
+      sendVoiceError(client, "Only non-empty text messages up to 2,000 characters are accepted.");
+      return;
+    }
+    agent.send(
+      JSON.stringify({
+        type: "InjectUserMessage",
+        content: message.content.trim(),
+      }),
+    );
+  });
+
+  client.on("close", () => {
+    if (agent.readyState === WebSocket.OPEN || agent.readyState === WebSocket.CONNECTING) {
+      agent.close();
+    }
+  });
+});
+
+server.on("upgrade", (request, socket, head) => {
+  let url;
+  let origin;
+  try {
+    if (!request.headers.host || !request.headers.origin) throw new Error();
+    url = new URL(request.url, `http://${request.headers.host}`);
+    origin = new URL(request.headers.origin);
+  } catch {
+    socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+  if (url.pathname !== "/api/voice") {
+    socket.destroy();
+    return;
+  }
+
+  if (origin.host !== request.headers.host) {
+    socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+
+  voiceServer.handleUpgrade(request, socket, head, (client) => {
+    voiceServer.emit("connection", client, request);
   });
 });
 
