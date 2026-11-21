@@ -14,7 +14,7 @@ const diagnosisInput = document.querySelector("#diagnosis-input");
 const diagnosisButton = document.querySelector("#diagnosis-button");
 const result = document.querySelector("#result");
 
-const interviewDuration = 15 * 60;
+const interviewDuration = 50;
 let sessionId;
 let remainingSeconds = interviewDuration;
 let timerInterval;
@@ -428,7 +428,7 @@ function finishInterview(timeExpired = false) {
   caseScreen.classList.add("hidden");
   diagnosisScreen.classList.remove("hidden");
   if (timeExpired) {
-    showError("Your 15-minute interview is over. Submit your diagnosis to finish.");
+    showError("Your 50-second interview is over. Submit your diagnosis to finish.");
   }
   diagnosisInput.focus();
 }
@@ -456,6 +456,7 @@ function renderResults(data) {
     categoryScores.append(item);
   }
   const feedback = document.createElement("p");
+  feedback.className = "result-feedback";
   feedback.textContent = data.summary;
   const expected = document.createElement("p");
   expected.className = "expected";
@@ -474,11 +475,13 @@ function renderResults(data) {
     }
     resultItems.push(heading, differentials);
   }
-  for (const [title, entries] of [
-    ["What you did well", data.strengths],
-    ["What to improve", data.improvements],
+  for (const [title, entries, tone] of [
+    ["What you did well", data.strengths, "positive"],
+    ["What to improve", data.improvements, "feedback"],
   ]) {
     if (!entries.length) continue;
+    const section = document.createElement("section");
+    section.className = `result-highlight result-${tone}`;
     const heading = document.createElement("h3");
     heading.textContent = title;
     const list = document.createElement("ul");
@@ -487,7 +490,8 @@ function renderResults(data) {
       item.textContent = entry;
       list.append(item);
     }
-    resultItems.push(heading, list);
+    section.append(heading, list);
+    resultItems.push(section);
   }
   const newCaseButton = document.createElement("button");
   newCaseButton.className = "quiet-button result-new-case";

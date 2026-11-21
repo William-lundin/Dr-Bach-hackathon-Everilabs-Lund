@@ -56,6 +56,11 @@
 .assessment-note { padding: 22px; border: 1px solid #dedede; border-radius: 4px; background: #eeeeee; }
 .assessment-note h2 { margin-bottom: 8px; font-size: 15px; }
 .assessment-note p { max-width: 850px; margin: 0; color: #555555; font-size: 12px; line-height: 1.65; }
+.sample-case { margin-top: 16px; border: 1px solid #dedede; border-radius: 4px; background: #ffffff; }
+.sample-case summary { padding: 12px 15px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.sample-case-content { padding: 13px 15px; border-top: 1px solid #dedede; }
+.sample-case-content ul { display: grid; gap: 7px; margin: 0; padding-left: 18px; color: #555555; font-size: 12px; line-height: 1.55; }
+.sample-case-content > p { margin: 12px 0 0; font-size: 12px; line-height: 1.55; }
 .landing-footer {
   min-height: 64px;
   margin-top: 52px;

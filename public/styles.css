@@ -119,6 +119,24 @@ h2 { margin-bottom: 7px; font-size: 13px; font-weight: 650; }
 .differential-list li { margin-bottom: 7px; }
 .result h3 { margin: 14px 0 5px; color: var(--text); font-size: 12px; }
 .result ul { padding-left: 18px; margin: 5px 0 0; }
+.result-feedback, .result-positive {
+  padding: 11px 13px;
+  border: 1px solid;
+  border-radius: 4px;
+}
+.result-feedback {
+  border-color: #ffaaaa;
+  color: #7f1d1d;
+  background: #ffe7e7;
+}
+.result-positive {
+  border-color: #8cdda0;
+  color: #14532d;
+  background: #e5ffe9;
+}
+.result p.result-feedback { margin: 10px 0; }
+.result-highlight h3 { margin: 0; color: inherit; }
+.result-highlight ul { margin-bottom: 0; }
 .result .expected { color: var(--text); font-weight: 600; }
 .result-new-case { margin-top: 17px; }
 

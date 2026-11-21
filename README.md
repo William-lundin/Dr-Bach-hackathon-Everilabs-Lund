@@ -67,7 +67,7 @@ interview; use headphones to reduce audio feedback.
 
 1. Review the patient file: name, age, sex, reason for visit, and previous
    conditions.
-2. Select **See patient** and allow microphone access to start the 15-minute
+2. Select **See patient** and allow microphone access to start the 50-second
    voice encounter. Speak naturally; the patient responds aloud and can be
    interrupted. Keep private notes alongside the interview.
 3. Select **Diagnose & finish** (or wait for the timer) to enter a diagnosis and
