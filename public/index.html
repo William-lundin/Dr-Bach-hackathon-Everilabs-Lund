@@ -3,20 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f5f7f8" />
-    <title>Ward — Diagnostic training</title>
+    <meta name="theme-color" content="#f7f7f7" />
+    <title>Ward</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <header class="topbar">
-      <a class="brand" href="/" aria-label="Ward home">
-        <span class="brand-mark">W</span>
-        <span>ward<span class="brand-dot">.</span></span>
-      </a>
-      <div class="topbar-meta"><span class="live-dot"></span> Training mode</div>
+      <a class="brand" href="/" aria-label="Ward home">Ward</a>
       <div class="topbar-actions">
         <div class="timer-chip hidden" id="timer-chip" aria-live="off">
-          <span class="timer-dot"></span>
           <span id="timer">15:00</span>
           <span class="timer-label">REMAINING</span>
         </div>
@@ -25,143 +20,58 @@
     </header>
 
     <main class="case-screen" id="case-screen">
-      <div class="case-progress">
-        <span class="progress-step active"><span>1</span> Patient file</span>
-        <i></i>
-        <span class="progress-step"><span>2</span> Interview</span>
-        <i></i>
-        <span class="progress-step"><span>3</span> Diagnosis</span>
-      </div>
-
-      <section class="file-card panel">
-        <div class="file-intro">
-          <div class="file-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM14 3v6h5M9 13h7M9 17h7" /></svg>
-          </div>
+      <section class="minimal-card">
+        <p class="eyebrow">PATIENT FILE</p>
+        <div class="patient-summary">
+          <span class="patient-initials" id="patient-initials">—</span>
           <div>
-            <p class="eyebrow">NEW SIMULATION</p>
-            <h1>Patient file</h1>
-            <p class="file-subtitle">Review the available information before you begin.</p>
+            <h1 id="patient-name">Loading patient…</h1>
+            <p class="patient-meta"><span id="patient-age">—</span><span id="patient-sex">—</span></p>
           </div>
         </div>
-
-        <div class="file-patient">
-          <div class="file-avatar" id="patient-initials">JL</div>
-          <div>
-            <p class="eyebrow">PATIENT</p>
-            <h2 id="patient-name">Loading patient…</h2>
-          </div>
-          <span class="case-tag">CASE 01</span>
-        </div>
-
-        <div class="file-facts">
-          <div class="fact-card">
-            <span class="fact-label">AGE</span>
-            <strong id="patient-age">—</strong>
-          </div>
-          <div class="fact-card">
-            <span class="fact-label">SEX</span>
-            <strong id="patient-sex">—</strong>
-          </div>
-        </div>
-
         <div class="file-section">
-          <h3>Reason for visit</h3>
+          <h2>Reason for visit</h2>
           <p id="reason-for-visit">Loading visit information…</p>
         </div>
-        <div class="file-section conditions-section">
-          <h3>Previous conditions</h3>
+        <div class="file-section">
+          <h2>Previous conditions</h2>
           <ul id="previous-conditions"></ul>
         </div>
-
         <div class="file-footer">
-          <p><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg> You will have <strong>15 minutes</strong> with the patient. Allow microphone access to speak naturally.</p>
-          <button class="primary-button" id="see-patient" type="button" disabled>
-            See patient
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7" /></svg>
-          </button>
+          <p>15 minutes with the patient. Allow microphone access to speak.</p>
+          <button class="primary-button" id="see-patient" type="button" disabled>See patient</button>
         </div>
       </section>
-      <p class="disclaimer">Educational simulation only · Not for clinical use</p>
     </main>
 
     <main class="encounter-screen hidden" id="encounter-screen">
-      <section class="encounter-main panel">
-        <div class="encounter-heading">
-          <div>
-            <p class="eyebrow">PATIENT INTERVIEW</p>
-            <h1 id="encounter-title">Your consultation</h1>
-          </div>
-          <span class="session-status"><span class="live-dot"></span> Session live</span>
+      <section class="encounter-stage" id="encounter-stage">
+        <div class="encounter-patient-label">Patient: <strong id="encounter-title">—</strong></div>
+        <div class="waveform-wrap">
+          <canvas id="waveform-canvas" aria-hidden="true"></canvas>
         </div>
-
-        <form class="composer" id="chat-form">
-          <div class="wave-stage" id="wave-stage" aria-live="polite">
-            <div class="wave-orb"><span class="orb-core"></span><span class="orb-halo"></span></div>
-            <div class="waveform" id="waveform" aria-hidden="true"></div>
-            <p class="speech-status" id="speech-status">Ready when you are</p>
-          </div>
-          <label class="sr-only" for="chat-input">Type a message to the patient</label>
-          <div class="question-composer">
-            <textarea id="chat-input" rows="1" maxlength="2000" placeholder="Or type a message…" required></textarea>
-            <button class="send-button" id="send-button" type="submit" aria-label="Send question">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7" /></svg>
-            </button>
-          </div>
-        </form>
-        <div class="composer-hint">Speak naturally; audio is streamed during the interview <span>·</span> Enter to send typed messages <span>·</span> Shift + Enter for a new line</div>
+        <p id="speech-status" class="speech-status">Ready when you are</p>
       </section>
-
       <aside class="encounter-side">
-        <section class="notes-panel panel encounter-notes">
-          <div class="side-heading">
-            <div class="side-icon notes-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M7 4h10a2 2 0 0 1 2 2v14H5V6a2 2 0 0 1 2-2ZM8 9h8M8 13h8M8 17h5" /></svg>
-            </div>
-            <div><p class="eyebrow">YOUR WORKSPACE</p><h2>Clinical notes</h2></div>
-          </div>
-          <label class="sr-only" for="notes">Your clinical notes</label>
+        <section class="notes-panel encounter-notes">
+          <label for="notes">Clinical notes</label>
           <textarea id="notes" placeholder="Record symptoms, timeline, relevant history, and questions to follow up…"></textarea>
-          <p class="notes-footnote">Private to your session. Notes are not shown to the patient.</p>
         </section>
-        <button class="finish-button" id="diagnose-finish" type="button">
-          Diagnose &amp; finish
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7" /></svg>
-        </button>
-        <p class="disclaimer">Educational simulation only · Not for clinical use</p>
+        <button class="finish-button" id="diagnose-finish" type="button">Diagnose &amp; finish</button>
       </aside>
     </main>
 
     <main class="diagnosis-screen hidden" id="diagnosis-screen">
-      <div class="case-progress">
-        <span class="progress-step complete"><span>✓</span> Patient file</span>
-        <i></i>
-        <span class="progress-step complete"><span>✓</span> Interview</span>
-        <i></i>
-        <span class="progress-step active"><span>3</span> Diagnosis</span>
-      </div>
-      <section class="diagnosis-card panel">
-        <div class="diagnosis-heading">
-          <div class="side-icon diagnosis-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18" /></svg>
-          </div>
-          <div>
-            <p class="eyebrow">CONSULTATION COMPLETE</p>
-            <h1>What is your diagnosis?</h1>
-            <p class="file-subtitle">Summarize your leading diagnosis before you finish the encounter.</p>
-          </div>
-        </div>
+      <section class="minimal-card diagnosis-card">
+        <p class="eyebrow">CONSULTATION COMPLETE</p>
+        <h1>What is your diagnosis?</h1>
         <form id="diagnosis-form">
           <label for="diagnosis-input">Your diagnosis</label>
           <textarea id="diagnosis-input" maxlength="500" placeholder="Enter your working diagnosis and a brief rationale…" required></textarea>
-          <button class="submit-button" id="diagnosis-button" type="submit">
-            Finish with patient
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7" /></svg>
-          </button>
+          <button class="submit-button" id="diagnosis-button" type="submit">Finish with patient</button>
         </form>
         <div class="result hidden" id="result" aria-live="polite"></div>
       </section>
-      <p class="disclaimer">Educational simulation only · Not for clinical use</p>
     </main>
     <div class="toast hidden" id="toast" role="alert"></div>
     <script src="/app.js" defer></script>

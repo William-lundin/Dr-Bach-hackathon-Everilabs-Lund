@@ -4,10 +4,9 @@ const diagnosisScreen = document.querySelector("#diagnosis-screen");
 const seePatientButton = document.querySelector("#see-patient");
 const timerChip = document.querySelector("#timer-chip");
 const timerDisplay = document.querySelector("#timer");
-const chatForm = document.querySelector("#chat-form");
-const chatInput = document.querySelector("#chat-input");
-const sendButton = document.querySelector("#send-button");
-const waveform = document.querySelector("#waveform");
+const waveformCanvas = document.querySelector("#waveform-canvas");
+const waveformContext = waveformCanvas.getContext("2d");
+const encounterStage = document.querySelector("#encounter-stage");
 const speechStatus = document.querySelector("#speech-status");
 const toast = document.querySelector("#toast");
 const diagnosisForm = document.querySelector("#diagnosis-form");
@@ -29,16 +28,68 @@ let captureNode;
 let silentOutput;
 let agentAudioSources = new Set();
 let scheduledAudioTime = 0;
-let requestPending = false;
 let phase = "file";
+let waveformMode = "listening";
+let currentAmp = 0.1;
+let currentSpeed = 0.018;
+let waveformPhase = 0;
+let canvasWidth = 0;
+let canvasHeight = 0;
 
-for (let index = 0; index < 40; index += 1) {
-  const bar = document.createElement("span");
-  bar.className = "wave-bar";
-  bar.style.setProperty("--bar-index", index);
-  bar.style.setProperty("--bar-height", `${7 + ((index * 13) % 25)}px`);
-  waveform.append(bar);
+function resizeCanvas() {
+  const bounds = waveformCanvas.getBoundingClientRect();
+  const pixelRatio = window.devicePixelRatio || 1;
+  canvasWidth = bounds.width;
+  canvasHeight = bounds.height;
+  waveformCanvas.width = Math.round(canvasWidth * pixelRatio);
+  waveformCanvas.height = Math.round(canvasHeight * pixelRatio);
+  waveformContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 }
+
+function renderWaveform() {
+  const targets = {
+    speaking: { amp: 1, speed: 0.075 },
+    thinking: { amp: 0.35, speed: 0.045 },
+    listening: { amp: 0.1, speed: 0.018 },
+  };
+  const target = targets[waveformMode];
+  currentAmp += (target.amp - currentAmp) * 0.08;
+  currentSpeed += (target.speed - currentSpeed) * 0.08;
+  waveformPhase += currentSpeed;
+
+  if (waveformContext && canvasWidth && canvasHeight) {
+    waveformContext.clearRect(0, 0, canvasWidth, canvasHeight);
+    const middle = canvasHeight / 2;
+    const amplitude = canvasHeight * 0.34 * currentAmp;
+    const layers = [
+      { color: "rgba(255, 255, 255, 0.14)", lineWidth: 1, phase: -0.5, scale: 0.88 },
+      { color: "rgba(255, 255, 255, 0.28)", lineWidth: 1.25, phase: 0.35, scale: 0.95 },
+      { color: "rgba(240, 240, 240, 0.90)", lineWidth: 1.8, phase: 0, scale: 1 },
+    ];
+
+    for (const layer of layers) {
+      waveformContext.beginPath();
+      for (let x = 0; x <= canvasWidth; x += 2) {
+        const normX = x / canvasWidth;
+        const envelope = Math.pow(Math.sin(normX * Math.PI), 1.5);
+        const signal =
+          Math.sin(normX * Math.PI * 6 + waveformPhase + layer.phase) * 0.55 +
+          Math.sin(normX * Math.PI * 12 - waveformPhase * 1.35 + layer.phase) * 0.3 +
+          Math.sin(normX * Math.PI * 18 + waveformPhase * 0.7 + layer.phase) * 0.15;
+        const y = middle + signal * envelope * amplitude * layer.scale;
+        if (x === 0) waveformContext.moveTo(x, y);
+        else waveformContext.lineTo(x, y);
+      }
+      waveformContext.strokeStyle = layer.color;
+      waveformContext.lineWidth = layer.lineWidth;
+      waveformContext.stroke();
+    }
+  }
+  requestAnimationFrame(renderWaveform);
+}
+
+window.addEventListener("resize", resizeCanvas);
+requestAnimationFrame(renderWaveform);
 
 function showError(message) {
   toast.textContent = message;
@@ -71,11 +122,10 @@ function updateTimer() {
   timerChip.classList.toggle("timer-warning", remainingSeconds <= 60);
 }
 
-function setPatientStatus(message, mode = "") {
+function setPatientStatus(message, mode = "listening") {
   speechStatus.textContent = message;
-  waveform.classList.toggle("is-speaking", mode === "speaking");
-  waveform.classList.toggle("is-thinking", mode === "thinking");
-  document.querySelector(".wave-stage").classList.toggle("patient-speaking", mode === "speaking");
+  waveformMode = mode;
+  encounterStage.classList.toggle("is-speaking", mode === "speaking");
 }
 
 function stopAgentAudio() {
@@ -142,8 +192,7 @@ function handleVoiceEvent(event) {
   if (event.type === "SettingsApplied") {
     voiceReady = true;
     startMicrophoneCapture();
-    setPatientStatus("Connected — speak naturally or type a message");
-    sendButton.disabled = false;
+    setPatientStatus("Connected — speak naturally", "listening");
     return;
   }
   if (event.type === "Error") {
@@ -180,8 +229,7 @@ function handleVoiceEvent(event) {
     return;
   }
   if (event.type === "AgentAudioDone") {
-    setPatientStatus("Listening — speak naturally or type a message");
-    sendButton.disabled = false;
+    setPatientStatus("Listening — speak naturally", "listening");
   }
 }
 
@@ -287,6 +335,7 @@ function stopVoiceSession() {
 
 async function loadCaseFile() {
   stopVoiceSession();
+  document.body.classList.remove("is-consultation");
   phase = "file";
   clearInterval(timerInterval);
   timerInterval = undefined;
@@ -297,7 +346,6 @@ async function loadCaseFile() {
   diagnosisScreen.classList.add("hidden");
   caseScreen.classList.remove("hidden");
   seePatientButton.disabled = true;
-  chatInput.value = "";
   document.querySelector("#notes").value = "";
   diagnosisInput.value = "";
   diagnosisForm.classList.remove("hidden");
@@ -335,14 +383,15 @@ async function loadCaseFile() {
 async function beginInterview() {
   if (!sessionId || phase !== "file") return;
   phase = "interview";
+  document.body.classList.add("is-consultation");
   caseScreen.classList.add("hidden");
   diagnosisScreen.classList.add("hidden");
   encounterScreen.classList.remove("hidden");
+  resizeCanvas();
   timerChip.classList.remove("hidden");
   document.querySelector("#encounter-title").textContent = "Your consultation";
   remainingSeconds = interviewDuration;
   updateTimer();
-  sendButton.disabled = true;
   setPatientStatus("Connecting to the voice agent…", "thinking");
 
   try {
@@ -350,6 +399,7 @@ async function beginInterview() {
   } catch (error) {
     stopVoiceSession();
     phase = "file";
+    document.body.classList.remove("is-consultation");
     encounterScreen.classList.add("hidden");
     timerChip.classList.add("hidden");
     caseScreen.classList.remove("hidden");
@@ -369,6 +419,7 @@ async function beginInterview() {
 function finishInterview(timeExpired = false) {
   if (phase !== "interview") return;
   phase = "diagnosis";
+  document.body.classList.remove("is-consultation");
   clearInterval(timerInterval);
   timerInterval = undefined;
   stopVoiceSession();
@@ -380,31 +431,6 @@ function finishInterview(timeExpired = false) {
     showError("Your 15-minute interview is over. Submit your diagnosis to finish.");
   }
   diagnosisInput.focus();
-}
-
-async function submitQuestion(event) {
-  event.preventDefault();
-  const message = chatInput.value.trim();
-  if (!message || !sessionId || phase !== "interview" || requestPending) return;
-
-  requestPending = true;
-  chatInput.value = "";
-  chatInput.style.height = "auto";
-  sendButton.disabled = true;
-  try {
-    if (!voiceReady || voiceSocket?.readyState !== WebSocket.OPEN) {
-      throw new Error("The voice agent is not connected. Start a new interview and try again.");
-    }
-    stopAgentAudio();
-    voiceSocket.send(JSON.stringify({ type: "InjectUserMessage", content: message }));
-    setPatientStatus("Sending your message…", "thinking");
-  } catch (error) {
-    setPatientStatus("Ready when you are", "");
-    sendButton.disabled = false;
-    showError(error.message);
-  } finally {
-    requestPending = false;
-  }
 }
 
 function renderResults(data) {
@@ -491,17 +517,6 @@ async function submitDiagnosis(event) {
   }
 }
 
-chatForm.addEventListener("submit", submitQuestion);
-chatInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" && !event.shiftKey) {
-    event.preventDefault();
-    chatForm.requestSubmit();
-  }
-});
-chatInput.addEventListener("input", () => {
-  chatInput.style.height = "auto";
-  chatInput.style.height = `${Math.min(chatInput.scrollHeight, 110)}px`;
-});
 seePatientButton.addEventListener("click", beginInterview);
 document.querySelector("#diagnose-finish").addEventListener("click", () => finishInterview());
 diagnosisForm.addEventListener("submit", submitDiagnosis);
