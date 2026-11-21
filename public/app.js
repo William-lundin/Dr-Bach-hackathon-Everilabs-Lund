@@ -259,22 +259,54 @@ function renderResults(data) {
   const score = document.createElement("div");
   score.className = "result-score";
   score.textContent = `${data.score}/100`;
+  const categoryScores = document.createElement("ul");
+  categoryScores.className = "category-scores";
+  const categoryLabels = {
+    diagnosis: "Diagnosis",
+    clinicalReasoning: "Clinical reasoning",
+    differentialAndExclusion: "Differential & exclusion",
+    evidenceGathering: "Evidence gathering",
+  };
+  for (const [category, label] of Object.entries(categoryLabels)) {
+    const item = document.createElement("li");
+    item.textContent = `${label}: ${data.categoryScores[category]}/${
+      { diagnosis: 35, clinicalReasoning: 25, differentialAndExclusion: 30, evidenceGathering: 10 }[category]
+    }`;
+    categoryScores.append(item);
+  }
   const feedback = document.createElement("p");
-  feedback.textContent = data.feedback;
+  feedback.textContent = data.summary;
   const expected = document.createElement("p");
   expected.className = "expected";
-  expected.textContent = `Leading diagnosis: ${data.expectedDiagnosis}`;
-  const resultItems = [thankYou, score, feedback, expected];
-  if (data.keyFindings.length) {
+  expected.textContent = `Diagnosis assessment: ${data.diagnosisAssessment}`;
+  const resultItems = [thankYou, score, categoryScores, feedback, expected];
+
+  if (data.differentials.length) {
     const heading = document.createElement("h3");
-    heading.textContent = "History checklist";
-    const findings = document.createElement("ul");
-    for (const finding of data.keyFindings) {
+    heading.textContent = "Relevant alternatives";
+    const differentials = document.createElement("ul");
+    differentials.className = "differential-list";
+    for (const differential of data.differentials) {
       const item = document.createElement("li");
-      item.textContent = `${finding}${data.coveredFindings.includes(finding) ? " · asked" : ""}`;
-      findings.append(item);
+      item.textContent = `${differential.diagnosis} (${differential.relevance}; ${differential.status}) — ${differential.evidence} Next: ${differential.nextStep}`;
+      differentials.append(item);
     }
-    resultItems.push(heading, findings);
+    resultItems.push(heading, differentials);
+  }
+  for (const [title, entries] of [
+    ["What you did well", data.strengths],
+    ["What to improve", data.improvements],
+  ]) {
+    if (!entries.length) continue;
+    const heading = document.createElement("h3");
+    heading.textContent = title;
+    const list = document.createElement("ul");
+    for (const entry of entries) {
+      const item = document.createElement("li");
+      item.textContent = entry;
+      list.append(item);
+    }
+    resultItems.push(heading, list);
   }
   const newCaseButton = document.createElement("button");
   newCaseButton.className = "quiet-button result-new-case";
@@ -294,6 +326,7 @@ async function submitDiagnosis(event) {
     const data = await requestJson("/api/diagnosis", {
       sessionId,
       diagnosis: diagnosisInput.value.trim(),
+      notes: document.querySelector("#notes").value,
     });
     renderResults(data);
   } catch (error) {

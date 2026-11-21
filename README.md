@@ -43,14 +43,17 @@ substituting simulated output.
   The simulator does not capture or upload student audio.
 - **Session API** — `server.js` owns short-lived interview history and exposes
   `POST /api/sessions`, `POST /api/chat`, `POST /api/speech`, and
-  `POST /api/diagnosis`. Notes remain in the
-  browser and are not included in patient prompts.
-- **Scoring** — `src/diagnostics.js` scores the submitted diagnosis and
-  interview coverage against the built-in sample rubric. Dataset profiles
-  score the submitted diagnosis against their extracted primary diagnosis;
-  they do not yet have a validated interview-coverage rubric. Extend and
-  validate case-specific rubrics before using dataset cases for formal
-  assessment.
+  `POST /api/diagnosis`. Notes stay in the browser during the interview and
+  are sent to the server only with the final diagnosis for grading; they are
+  not included in patient prompts.
+- **Assessment** — after submission, `gradeEncounter` in `src/providers.js`
+  sends the case reference, interview transcript, student notes, and diagnosis
+  to Claude. Claude grades diagnosis, clinical reasoning, evidence gathering,
+  and whether relevant alternative diagnoses—especially dangerous mimics—were
+  reasonably considered or lowered by evidence. It returns rubric scores plus
+  specific strengths, gaps, and follow-up suggestions. It should not penalize
+  students for failing to list every conceivable diagnosis. This is formative
+  educational feedback, not a validated clinical assessment.
 
 Claude uses the Anthropic Messages API and patient speech uses the ElevenLabs
 SDK. Student dictation is provided by the Wispr Flow desktop application;

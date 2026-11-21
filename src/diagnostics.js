@@ -43,46 +43,4 @@ function getCase(caseId) {
   return cases.find((candidate) => candidate.id === caseId) ?? null;
 }
 
-function scoreDiagnosis(caseData, submittedDiagnosis, conversation = []) {
-  const answer = submittedDiagnosis.trim().toLowerCase();
-  const aliases = caseData.diagnosis.aliases || [caseData.diagnosis.label];
-  const isCorrect = aliases.some((alias) => answer.includes(alias));
-  const keyFindings = caseData.diagnosis.keyFindings || [];
-  const coveredFindings = keyFindings.filter((finding) => {
-    const index = keyFindings.indexOf(finding);
-    const signals = caseData.diagnosis.interviewSignals?.[index] || [];
-    return conversation
-      .filter((turn) => turn.role === "user")
-      .some((turn) =>
-        signals.some((signal) => turn.content.toLowerCase().includes(signal)),
-      );
-  });
-  const historyPoints = Math.round(
-    keyFindings.length
-      ? (coveredFindings.length / keyFindings.length) * 40
-      : 0,
-  );
-  const score = keyFindings.length
-    ? Math.min(100, (isCorrect ? 60 : 0) + historyPoints)
-    : isCorrect
-      ? 100
-      : 0;
-
-  return {
-    score,
-    diagnosisCorrect: isCorrect,
-    expectedDiagnosis: caseData.diagnosis.label,
-    keyFindings,
-    coveredFindings,
-    explanation: caseData.diagnosis.explanation,
-    feedback: keyFindings.length
-      ? isCorrect
-        ? "Good work identifying the most likely diagnosis. Review the key findings below and consider whether your history covered important warning signs."
-        : "Your submitted diagnosis does not match the leading diagnosis in this case. Review the history clues below and consider what additional questions would help distinguish the possibilities."
-      : isCorrect
-        ? "Your diagnosis matches the case answer."
-        : "Your diagnosis does not match the case answer. Review the case information and answer key.",
-  };
-}
-
-module.exports = { getCase, scoreDiagnosis };
+module.exports = { getCase };

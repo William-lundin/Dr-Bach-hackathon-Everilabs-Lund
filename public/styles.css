@@ -83,6 +83,8 @@ h2 { font-size: 16px; }
 .submit-button:hover { background: #28614f; }.submit-button:disabled { opacity: .55; cursor: wait; }
 .result { margin-top: 18px; padding-top: 16px; border-top: 1px solid #e9eeeb; color: #52635b; font-size: 12px; line-height: 1.6; }
 .result-score { color: var(--dark-green); font: 700 24px Manrope, sans-serif; }
+.category-scores { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 16px; padding-left: 17px; color: #64736c; font-size: 11px; }
+.differential-list li { margin-bottom: 7px; }
 .result h3 { margin: 12px 0 5px; color: #34483e; font-size: 11px; }
 .result ul { padding-left: 17px; margin: 5px 0 0; }
 .result .expected { margin-top: 8px; color: #314d40; font-weight: 600; }
