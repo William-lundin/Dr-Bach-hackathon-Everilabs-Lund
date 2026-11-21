@@ -58,6 +58,7 @@ test("patient replies use the configured Claude model and Anthropic Messages API
     assert.equal(requestOptions.headers["x-api-key"], "test-anthropic-key");
     const body = JSON.parse(requestOptions.body);
     assert.equal(body.model, "claude-haiku-5-5");
+    assert.equal("temperature" in body, false);
     assert.equal(body.system, "Dataset role prompt with full generated profile.");
     assert.equal(body.messages[0].role, "user");
     assert.equal(body.messages[0].content, "When did it start?");

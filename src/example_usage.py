@@ -38,6 +38,16 @@ while True:
         messages=messages,
     )
 
-    reply = response.content[0].text
+    reply = next(
+        (
+            block.text.strip()
+            for block in response.content
+            if getattr(block, "type", None) == "text"
+            and isinstance(getattr(block, "text", None), str)
+        ),
+        "",
+    )
+    if not reply:
+        raise RuntimeError("Claude returned no visible text response.")
     messages.append({"role": "assistant", "content": reply})
     print(f"Patient: {reply}\n")

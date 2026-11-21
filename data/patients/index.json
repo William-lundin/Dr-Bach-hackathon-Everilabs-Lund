@@ -1,0 +1,14 @@
+[
+  {
+    "patient_id": "D2N168",
+    "file": "D2N168.md",
+    "dataset": "virtassist",
+    "cc": "ER follow-up",
+    "2nd_complaints": "type 2 diabetes;depression;hypertension",
+    "patient_age": "28",
+    "patient_gender": "female",
+    "patient_firstname": "Diane",
+    "patient_familyname": "Baker",
+    "source_file": "clef_taskC_test3.csv"
+  }
+]

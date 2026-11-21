@@ -100,3 +100,18 @@ to override it. Paths can be overridden with `--raw-dir`, `--out-dir`, and
 `--prompt`. The app uses the generated dataset after profiles have been
 created; restart the server after rebuilding profiles. Without generated
 profiles it continues to use the built-in sample case.
+
+The Python builder reads `ANTHROPIC_API_KEY` from the current shell, then falls
+back to the repository's `.env.local` or `key.env` file. It does not overwrite
+an environment variable already exported by your shell. Before generating, you
+can confirm setup without using API credits by running `--dry-run`.
+Generated responses are checked for the opening line, primary diagnosis, and
+answer key before they are saved. If a previous run left a truncated profile
+(for example `D2N168.md`), regenerate it with:
+
+```sh
+python src/build_patient.py --overwrite --limit 1
+```
+
+The app logs and skips malformed dataset profiles rather than failing to start
+all patient sessions because of one incomplete file.

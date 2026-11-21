@@ -125,8 +125,10 @@ async function loadPatientCases({
     throw new Error("Patient role prompt is missing {patient_profile}.");
   }
 
-  return Promise.all(
-    entries.map(async (entry) => {
+  const cases = [];
+  for (const entry of entries) {
+    const patientId = entry?.patient_id || "unknown";
+    try {
       if (!entry || typeof entry.patient_id !== "string") {
         throw new Error("Patient index contains an invalid entry.");
       }
@@ -139,9 +141,14 @@ async function loadPatientCases({
         throw new Error(`Invalid patient profile filename for ${entry.patient_id}.`);
       }
       const profile = await readFile(path.join(patientsDirectory, filename), "utf8");
-      return parsePatientCase(entry, profile, roleTemplate);
-    }),
-  );
+      cases.push(parsePatientCase(entry, profile, roleTemplate));
+    } catch (error) {
+      console.warn(
+        `Skipping patient profile ${patientId}: ${error.message}`,
+      );
+    }
+  }
+  return cases;
 }
 
 function createPatientDataset(options) {

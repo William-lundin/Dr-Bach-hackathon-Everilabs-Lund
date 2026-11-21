@@ -57,7 +57,6 @@ async function generatePatientReply(caseData, history) {
   const response = await postAnthropicMessages(
     {
       model: config.chatModel,
-      temperature: 0.7,
       max_tokens: 220,
       system:
         caseData.patient.systemPrompt ||

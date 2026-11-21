@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import json
 import random
-from typing import Optional
+from typing import Optional, Union
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -23,8 +23,8 @@ class PatientPrompt:
 class PatientPromptGenerator:
     def __init__(
         self,
-        patients_dir: str | Path = DEFAULT_PATIENTS_DIR,
-        system_template_path: str | Path = DEFAULT_SYSTEM_TEMPLATE,
+        patients_dir: Union[str, Path] = DEFAULT_PATIENTS_DIR,
+        system_template_path: Union[str, Path] = DEFAULT_SYSTEM_TEMPLATE,
     ):
         self.patients_dir = Path(patients_dir)
         self.system_template_path = Path(system_template_path)

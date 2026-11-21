@@ -112,3 +112,51 @@ test("missing generated data leaves the sample-case fallback available", async (
 
   assert.deepEqual(await loadPatientCases({ patientsDirectory: root }), []);
 });
+
+test("an incomplete patient profile is skipped without blocking valid profiles", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "patient-dataset-invalid-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+
+  const patientsDirectory = path.join(root, "patients");
+  await mkdir(patientsDirectory);
+  const validProfile = [
+    "# Patient Profile: Casey Taylor (ID: VALID001)",
+    "- **Demographics:** Casey Taylor; Age: 42; Gender: nonbinary",
+    '- **Chief Complaint:** "A recurring headache"',
+    '- **Opening Line:** "I have had a headache since this morning."',
+    "- **Primary Diagnosis:** Migraine without aura",
+    "- **Answer Key (never state aloud as the patient):** Migraine without aura; treat symptoms.",
+  ].join("\n");
+  const truncatedProfile = [
+    "# Patient Profile: Jamie Morgan (ID: BROKEN001)",
+    "- **Demographics:** Jamie Morgan; Age: 30; Gender: female",
+    '- **Opening Line:** "I have had a cough for a few days."',
+    "- **Associated Symptoms (Positive):** cough",
+  ].join("\n");
+  await writeFile(path.join(patientsDirectory, "VALID001.md"), validProfile);
+  await writeFile(path.join(patientsDirectory, "BROKEN001.md"), truncatedProfile);
+  await writeFile(
+    path.join(patientsDirectory, "index.json"),
+    JSON.stringify([
+      { patient_id: "VALID001", file: "VALID001.md" },
+      { patient_id: "BROKEN001", file: "BROKEN001.md" },
+    ]),
+  );
+  const roleTemplatePath = path.join(root, "role.txt");
+  await writeFile(roleTemplatePath, "Role instructions\n{patient_profile}");
+
+  const originalWarn = console.warn;
+  const warnings = [];
+  console.warn = (message) => warnings.push(message);
+  try {
+    const cases = await loadPatientCases({
+      patientsDirectory,
+      rolePromptPath: roleTemplatePath,
+    });
+    assert.deepEqual(cases.map((patientCase) => patientCase.id), ["VALID001"]);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /Skipping patient profile BROKEN001/);
+  } finally {
+    console.warn = originalWarn;
+  }
+});
