@@ -58,7 +58,7 @@ function buildVoiceAgentConfiguration(caseData, env = process.env) {
           provider: {
             type: "deepgram",
             version: "v2",
-            model: env.DEEPGRAM_TTS_MODEL || "flux-heather-en",
+            model: env.DEEPGRAM_TTS_MODEL || "flux-alexis-en",
             speed: 1,
             expressivity: 0,
           },

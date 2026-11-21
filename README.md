@@ -27,7 +27,7 @@ The `start` script loads `.env.local`.
   WebSocket. The server relays it to Deepgram Voice Agent, then streams
   24 kHz patient audio back. Deepgram Flux models handle transcription and
   speech; the agent uses Anthropic as its reasoning provider. The default
-  models are `flux-general-en`, `flux-heather-en` (speed 1, expressivity 0),
+  models are `flux-general-en`, `flux-alexis-en` (speed 1, expressivity 0),
   and `claude-haiku-5-5`;
   override them with `DEEPGRAM_STT_MODEL`, `DEEPGRAM_TTS_MODEL`, and
   `PATIENT_CHAT_MODEL`.
