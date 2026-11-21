@@ -11,7 +11,7 @@ Follow this exact Markdown template:
 # Patient Profile: <Name> (ID: <ID>)
 
 ## 1. Role & Persona
-- **Demographics:** <Age, gender, name>
+- **Demographics:** <Name>; Age: <number>; Gender: <gender>
 - **Occupation / Lifestyle / Context:** <Relevant social context, hobbies, support system, anyone accompanying the patient>
 - **Personality & Tone:** <Demeanor, anxiety level, attitude toward medications/care>
 
@@ -39,4 +39,5 @@ Follow this exact Markdown template:
 - **Vitals:** <...>
 - **Physical Exam:** <...>
 - **Labs & Imaging Ordered/Reviewed During Visit:** <...>
+- **Primary Diagnosis:** <One concise canonical diagnosis label only>
 - **Answer Key (never state aloud as the patient):** <Diagnosis/Assessment + brief summary of the plan>

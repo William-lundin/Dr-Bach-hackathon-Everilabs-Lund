@@ -81,17 +81,24 @@ class PatientPromptGenerator:
         self, patient_id: str, metadata: Optional[dict] = None
     ) -> PatientPrompt:
         """Loads a specific patient profile and builds the full system prompt."""
-        profile_path = self.patients_dir / f"{patient_id}.md"
+        meta = metadata or next(
+            (p for p in self.index if p["patient_id"] == patient_id),
+            {"patient_id": patient_id, "cc": ""},
+        )
+        filename = meta.get("file") or f"{patient_id}.md"
+        if (
+            not isinstance(filename, str)
+            or Path(filename).name != filename
+            or not filename.endswith(".md")
+        ):
+            raise ValueError(f"Invalid patient profile filename: {filename}")
+
+        profile_path = self.patients_dir / filename
         if not profile_path.exists():
             raise FileNotFoundError(f"Patient profile not found: {profile_path}")
 
         profile_text = profile_path.read_text(encoding="utf-8")
         system_prompt = self.system_template.replace("{patient_profile}", profile_text)
-
-        meta = metadata or next(
-            (p for p in self.index if p["patient_id"] == patient_id),
-            {"patient_id": patient_id, "cc": ""},
-        )
 
         return PatientPrompt(
             patient_id=patient_id,

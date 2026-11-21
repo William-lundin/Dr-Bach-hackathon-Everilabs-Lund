@@ -87,6 +87,10 @@ def build_all_patients(
                         "dataset": row.get("dataset", ""),
                         "cc": meta.get("cc", ""),
                         "2nd_complaints": meta.get("2nd_complaints", ""),
+                        "patient_age": meta.get("patient_age", ""),
+                        "patient_gender": meta.get("patient_gender", ""),
+                        "patient_firstname": meta.get("patient_firstname", ""),
+                        "patient_familyname": meta.get("patient_familyname", ""),
                         "source_file": src_file.name,
                     }
                 )

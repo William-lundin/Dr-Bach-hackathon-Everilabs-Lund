@@ -167,7 +167,9 @@ async function loadCaseFile() {
     sessionId = data.sessionId;
     patientOpening = data.patient.opening;
     document.querySelector("#patient-name").textContent = data.patient.name;
-    document.querySelector("#patient-age").textContent = `${data.patient.age} years`;
+    document.querySelector("#patient-age").textContent = data.patient.age
+      ? `${data.patient.age} years`
+      : "Not provided";
     document.querySelector("#patient-sex").textContent = data.patient.sex;
     document.querySelector("#reason-for-visit").textContent =
       data.patient.reasonForVisit;
@@ -262,20 +264,24 @@ function renderResults(data) {
   const expected = document.createElement("p");
   expected.className = "expected";
   expected.textContent = `Leading diagnosis: ${data.expectedDiagnosis}`;
-  const heading = document.createElement("h3");
-  heading.textContent = "History checklist";
-  const findings = document.createElement("ul");
-  for (const finding of data.keyFindings) {
-    const item = document.createElement("li");
-    item.textContent = `${finding}${data.coveredFindings.includes(finding) ? " · asked" : ""}`;
-    findings.append(item);
+  const resultItems = [thankYou, score, feedback, expected];
+  if (data.keyFindings.length) {
+    const heading = document.createElement("h3");
+    heading.textContent = "History checklist";
+    const findings = document.createElement("ul");
+    for (const finding of data.keyFindings) {
+      const item = document.createElement("li");
+      item.textContent = `${finding}${data.coveredFindings.includes(finding) ? " · asked" : ""}`;
+      findings.append(item);
+    }
+    resultItems.push(heading, findings);
   }
   const newCaseButton = document.createElement("button");
   newCaseButton.className = "quiet-button result-new-case";
   newCaseButton.type = "button";
   newCaseButton.textContent = "Start a new case";
   newCaseButton.addEventListener("click", loadCaseFile);
-  result.append(thankYou, score, feedback, expected, heading, findings, newCaseButton);
+  result.append(...resultItems, newCaseButton);
   result.classList.remove("hidden");
   diagnosisForm.classList.add("hidden");
 }

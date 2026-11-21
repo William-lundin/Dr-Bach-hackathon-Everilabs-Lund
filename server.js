@@ -3,6 +3,7 @@ const { randomUUID } = require("node:crypto");
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
 const { getCase, scoreDiagnosis } = require("./src/diagnostics");
+const { createPatientDataset } = require("./src/patient-dataset");
 const {
   generatePatientReply,
   synthesizeSpeech,
@@ -10,6 +11,7 @@ const {
 
 const publicDirectory = path.join(__dirname, "public");
 const sessions = new Map();
+const getRandomPatientCase = createPatientDataset();
 const maxHistoryTurns = 24;
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -75,10 +77,11 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "POST" && url.pathname === "/api/sessions") {
-    const caseData = getCase("migraine");
+    const caseData =
+      (await getRandomPatientCase()) || getCase("migraine");
     const sessionId = randomUUID();
     sessions.set(sessionId, {
-      caseId: caseData.id,
+      caseData,
       history: [{ role: "assistant", content: caseData.patient.opening }],
     });
     sendJson(response, 201, {
@@ -91,7 +94,7 @@ async function handleRequest(request, response) {
         previousConditions: caseData.patient.previousConditions,
         opening: caseData.patient.opening,
       },
-      caseTitle: caseData.title,
+      caseTitle: caseData.title || caseData.patient.name,
     });
     return;
   }
@@ -114,7 +117,7 @@ async function handleRequest(request, response) {
 
     const studentTurn = { role: "user", content: body.message.trim() };
     const history = [...session.history, studentTurn].slice(-maxHistoryTurns);
-    const reply = await generatePatientReply(getCase(session.caseId), history);
+    const reply = await generatePatientReply(session.caseData, history);
     session.history = [...history, { role: "assistant", content: reply }].slice(
       -maxHistoryTurns,
     );
@@ -161,7 +164,7 @@ async function handleRequest(request, response) {
     sendJson(
       response,
       200,
-      scoreDiagnosis(getCase(session.caseId), body.diagnosis, session.history),
+      scoreDiagnosis(session.caseData, body.diagnosis, session.history),
     );
     return;
   }

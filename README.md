@@ -27,10 +27,11 @@ substituting simulated output.
 
 - **Patient conversation model** — `src/providers.js` calls Anthropic's
   Messages API with `claude-haiku-5-5` by default. Override with
-  `PATIENT_CHAT_MODEL`. The case profile and server-maintained interview
-  history provide patient continuity; the model is instructed to stay in
-  character and reveal only information the student asks about. Set
-  `ANTHROPIC_BASE_URL` to use a compatible Anthropic endpoint.
+  `PATIENT_CHAT_MODEL`. If generated profiles exist in `data/patients`, the
+  server selects one for each new session and sends its full patient-role
+  prompt to Claude; otherwise it uses the built-in sample case. The selected
+  profile and server-maintained interview history provide patient continuity.
+  Set `ANTHROPIC_BASE_URL` to use a compatible Anthropic endpoint.
 - **Patient speech model** — the separate `/api/speech` endpoint uses the
   ElevenLabs JavaScript SDK to synthesize each reply. It defaults to
   `eleven_flash_v2_5` and voice `JBFqnCBsd6RMkjVDRZzb`; override them with
@@ -45,9 +46,11 @@ substituting simulated output.
   `POST /api/diagnosis`. Notes remain in the
   browser and are not included in patient prompts.
 - **Scoring** — `src/diagnostics.js` scores the submitted diagnosis and
-  interview coverage against the selected case rubric. This first scaffold
-  uses a deterministic rubric and one sample case; extend the case catalog and
-  rubric before using it for formal assessment.
+  interview coverage against the built-in sample rubric. Dataset profiles
+  score the submitted diagnosis against their extracted primary diagnosis;
+  they do not yet have a validated interview-coverage rubric. Extend and
+  validate case-specific rubrics before using dataset cases for formal
+  assessment.
 
 Claude uses the Anthropic Messages API and patient speech uses the ElevenLabs
 SDK. Student dictation is provided by the Wispr Flow desktop application;
@@ -71,22 +74,29 @@ session API do not depend on a specific model vendor.
 npm test
 ```
 
-## Generate patient profiles
+## Generate and use dataset patient profiles
 
 The optional Python pipeline reads only the human-transcribed `challenge_data`
 files by default, avoiding duplicate ASR variants. It writes profiles to
-`data/patients` and reads its extraction and role prompts from
-`Patient simulator/prompts`. Install the Python dependency and set
-`ANTHROPIC_API_KEY`, then run:
+`data/patients`; the Node app reads that same directory and uses the generated
+role prompt when calling Claude. Install the Python dependency in a virtual
+environment and export `ANTHROPIC_API_KEY` and, if needed,
+`PATIENT_CHAT_MODEL` in the same shell:
 
 ```sh
+python -m venv .venv
+source .venv/bin/activate
 python -m pip install -r requirements.txt
+export ANTHROPIC_API_KEY="your-anthropic-api-key"
 python src/build_patient.py --dry-run --limit 1
 python src/build_patient.py --limit 3
+npm start
 ```
 
 The dry run prints the exact request (model, system prompt, and patient data)
 without making an API call or writing output files.
-The model defaults to `PATIENT_CHAT_MODEL` or `claude-haiku-5-5`; pass
-`--model` to override it. Paths can be overridden with `--raw-dir`, `--out-dir`,
-and `--prompt`.
+The model defaults to `PATIENT_CHAT_MODEL` or `claude-haiku-5-5`; pass `--model`
+to override it. Paths can be overridden with `--raw-dir`, `--out-dir`, and
+`--prompt`. The app uses the generated dataset after profiles have been
+created; restart the server after rebuilding profiles. Without generated
+profiles it continues to use the built-in sample case.

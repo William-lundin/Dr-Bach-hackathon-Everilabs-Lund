@@ -30,3 +30,19 @@ test("incorrect answers do not receive diagnosis points", () => {
   assert.equal(result.score, 0);
   assert.equal(result.coveredFindings.length, 0);
 });
+
+test("dataset cases without a scoring rubric can still score the primary diagnosis", () => {
+  const result = scoreDiagnosis(
+    {
+      diagnosis: {
+        label: "Migraine without aura",
+        aliases: ["migraine without aura"],
+        keyFindings: [],
+        explanation: "The answer key indicates migraine without aura.",
+      },
+    },
+    "Migraine without aura",
+  );
+  assert.equal(result.score, 100);
+  assert.deepEqual(result.keyFindings, []);
+});
