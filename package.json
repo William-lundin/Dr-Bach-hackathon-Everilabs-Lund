@@ -4,10 +4,13 @@
   "private": true,
   "description": "Real-time patient interview and diagnostic training simulator",
   "scripts": {
-    "start": "node server.js",
+    "start": "node --env-file=.env.local server.js",
     "test": "node --test"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20.6"
+  },
+  "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.79.0"
   }
 }

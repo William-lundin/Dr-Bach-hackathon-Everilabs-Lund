@@ -128,7 +128,6 @@ chatInput.addEventListener("input", () => {
   chatInput.style.height = "auto";
   chatInput.style.height = `${Math.min(chatInput.scrollHeight, 110)}px`;
 });
-
 diagnosisForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!sessionId || diagnosisButton.disabled) return;

@@ -3,3 +3,5 @@ node_modules/
 key.env
 npm-debug.log*
 
+# Local secrets written by `elevenlabs onboard`
+/.env.local

@@ -3,7 +3,10 @@ const { randomUUID } = require("node:crypto");
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
 const { getCase, scoreDiagnosis } = require("./src/diagnostics");
-const { generatePatientReply, synthesizeSpeech } = require("./src/providers");
+const {
+  generatePatientReply,
+  synthesizeSpeech,
+} = require("./src/providers");
 
 const publicDirectory = path.join(__dirname, "public");
 const sessions = new Map();
@@ -65,7 +68,8 @@ async function handleRequest(request, response) {
   if (request.method === "GET" && url.pathname === "/api/health") {
     sendJson(response, 200, {
       status: "ok",
-      modelsConfigured: Boolean(process.env.AI_API_KEY),
+      patientModelConfigured: Boolean(process.env.ANTHROPIC_API_KEY),
+      speechModelConfigured: Boolean(process.env.ELEVENLABS_API_KEY),
     });
     return;
   }
@@ -167,7 +171,10 @@ const server = http.createServer((request, response) => {
   handleRequest(request, response).catch((error) => {
     console.error("Request failed:", error.message);
     if (!response.headersSent) {
-      sendJson(response, error.message.includes("AI_API_KEY") ? 503 : 502, {
+      const status =
+        error.statusCode ||
+        (error.message.includes("_API_KEY is not configured") ? 503 : 502);
+      sendJson(response, status, {
         error: error.message,
       });
     } else {
