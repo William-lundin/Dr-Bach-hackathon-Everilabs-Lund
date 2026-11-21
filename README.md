@@ -44,14 +44,18 @@ The `start` script loads `.env.local`.
   operate the simulation; do not use real patient-identifying information.
 - **Session API** — `server.js` owns short-lived interview history and exposes
   `POST /api/sessions`, `POST /api/chat` (text-only compatibility),
-  `WS /api/voice`, and `POST /api/diagnosis`. Notes remain in the browser and
-  are not included in patient prompts.
-- **Scoring** — `src/diagnostics.js` scores the submitted diagnosis and
-  interview coverage against the built-in sample rubric. Dataset profiles
-  score the submitted diagnosis against their extracted primary diagnosis;
-  they do not yet have a validated interview-coverage rubric. Extend and
-  validate case-specific rubrics before using dataset cases for formal
-  assessment.
+  `WS /api/voice`, and `POST /api/diagnosis`. Notes remain in the browser
+  during the interview and are submitted only for final assessment; they are
+  not included in patient prompts.
+- **Assessment** — after submission, `gradeEncounter` in `src/providers.js`
+  sends the case reference, interview transcript, student notes, and diagnosis
+  to Claude. Claude grades diagnosis, clinical reasoning, evidence gathering,
+  and whether relevant alternative diagnoses—especially dangerous mimics—were
+  reasonably considered or lowered by evidence. It returns rubric scores plus
+  specific strengths, gaps, and follow-up suggestions. It should not penalize
+  students for failing to list every conceivable diagnosis. This is formative
+  educational feedback, not a validated clinical assessment or a replacement
+  for case-specific scoring rubrics.
 
 Voice calls require microphone permission and a browser that supports
 AudioWorklet. The microphone stream is active for the duration of the

@@ -3,9 +3,12 @@ const { randomUUID } = require("node:crypto");
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
 const { WebSocket, WebSocketServer } = require("ws");
-const { getCase, scoreDiagnosis } = require("./src/diagnostics");
+const { getCase } = require("./src/diagnostics");
 const { createPatientDataset } = require("./src/patient-dataset");
-const { generatePatientReply } = require("./src/providers");
+const {
+  generatePatientReply,
+  gradeEncounter,
+} = require("./src/providers");
 const { buildVoiceAgentConfiguration } = require("./src/deepgram-voice");
 
 const publicDirectory = path.join(__dirname, "public");
@@ -32,7 +35,7 @@ async function readJson(request) {
   let body = "";
   for await (const chunk of request) {
     body += chunk;
-    if (body.length > 16_384) {
+    if (body.length > 48_000) {
       throw new Error("Request body is too large.");
     }
   }
@@ -135,21 +138,25 @@ async function handleRequest(request, response) {
       sendJson(response, 404, { error: "Interview session not found." });
       return;
     }
-    if (
-      typeof body.diagnosis !== "string" ||
-      !body.diagnosis.trim() ||
-      body.diagnosis.length > 500
-    ) {
+    if (typeof body.diagnosis !== "string" || !body.diagnosis.trim() || body.diagnosis.length > 500) {
       sendJson(response, 400, {
         error: "Enter a diagnosis of 1 to 500 characters.",
       });
       return;
     }
-    sendJson(
-      response,
-      200,
-      scoreDiagnosis(session.caseData, body.diagnosis, session.history),
+    if (typeof body.notes !== "string" || body.notes.length > 8_000) {
+      sendJson(response, 400, {
+        error: "Clinical notes must be 8,000 characters or fewer.",
+      });
+      return;
+    }
+    const grade = await gradeEncounter(
+      session.caseData,
+      body.diagnosis.trim(),
+      body.notes.trim(),
+      session.history,
     );
+    sendJson(response, 200, grade);
     return;
   }
 
