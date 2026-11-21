@@ -59,3 +59,23 @@ session API do not depend on a specific model vendor.
 ```sh
 npm test
 ```
+
+## Generate patient profiles
+
+The optional Python pipeline reads only the human-transcribed `challenge_data`
+files by default, avoiding duplicate ASR variants. It writes profiles to
+`data/patients` and reads its extraction and role prompts from
+`Patient simulator/prompts`. Install the Python dependency and set
+`ANTHROPIC_API_KEY`, then run:
+
+```sh
+python -m pip install -r requirements.txt
+python src/build_patient.py --dry-run --limit 1
+python src/build_patient.py --limit 3
+```
+
+The dry run prints the exact request (model, system prompt, and patient data)
+without making an API call or writing output files.
+The model defaults to `PATIENT_CHAT_MODEL` or `claude-haiku-5-5`; pass
+`--model` to override it. Paths can be overridden with `--raw-dir`, `--out-dir`,
+and `--prompt`.

@@ -1,0 +1,42 @@
+Below is raw data (metadata, conversation transcript, and clinical note) from a medical encounter.
+Your task is to convert this into a clean, well-structured Markdown patient profile for a clinical training simulation.
+
+IMPORTANT EXTRACTION RULES:
+- Cross-check inconsistencies: If metadata (name/gender) conflicts with the dialogue or clinical note (e.g., Kimberly vs. Charles), trust the clinical note (`NOTE`) and `DIALOGUE`.
+- Ignore ASR transcription typos, swapped [doctor]/[patient] speaker tags, voice dictation commands (e.g., "hey dragon", "dax"), and meta-chatter about reading a script or acting.
+- Strictly separate what the patient knows (Sections 1–4) from objective physical exam/test findings and the diagnosis (Section 5).
+
+Follow this exact Markdown template:
+
+# Patient Profile: <Name> (ID: <ID>)
+
+## 1. Role & Persona
+- **Demographics:** <Age, gender, name>
+- **Occupation / Lifestyle / Context:** <Relevant social context, hobbies, support system, anyone accompanying the patient>
+- **Personality & Tone:** <Demeanor, anxiety level, attitude toward medications/care>
+
+## 2. Chief Complaint & Opening Line
+- **Chief Complaint:** <Short reason for visit in everyday terms>
+- **Opening Line:** "<1–2 sentences the patient would say first when asked what brings them in>"
+
+## 3. History of Present Illness (reveal only if asked)
+- **Onset & Course:** <...>
+- **Quality, Location, Severity:** <...>
+- **Aggravating / Alleviating Factors:** <...>
+- **Associated Symptoms (Positive):** <...>
+- **Pertinent Negatives (Denied):** <...>
+- **Self-Treatment & Prior Care for This Issue:** <...>
+- **Prior Results Brought to Visit:** <Only include if the patient already received results/information prior to this visit, otherwise "None">
+
+## 4. Background
+- **Past Medical & Surgical History:** <...>
+- **Medications & Actual Adherence:** <List medications + whether the patient actually takes them, forgets, or skips doses>
+- **Allergies:** <...>
+- **Social & Family History:** <Smoking, alcohol, diet, exercise, family history>
+
+---
+## 5. FOR SIMULATION ONLY: Objective Findings & Results
+- **Vitals:** <...>
+- **Physical Exam:** <...>
+- **Labs & Imaging Ordered/Reviewed During Visit:** <...>
+- **Answer Key (never state aloud as the patient):** <Diagnosis/Assessment + brief summary of the plan>
