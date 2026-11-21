@@ -55,8 +55,10 @@ test("Deepgram Voice Agent settings use Deepgram audio and the current patient p
   );
   assert.equal(
     configuration.settings.agent.speak.provider.model,
-    "flux-alexis-en",
+    "flux-heather-en",
   );
+  assert.equal(configuration.settings.agent.speak.provider.speed, 1);
+  assert.equal(configuration.settings.agent.speak.provider.expressivity, 0);
   assert.equal(
     configuration.settings.agent.greeting,
     patientCase.patient.opening,
