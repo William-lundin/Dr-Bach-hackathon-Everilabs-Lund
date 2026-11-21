@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f7f7f7" />
+    <title>Ward</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Ward home">Ward</a>
+      <div class="topbar-actions">
+        <div class="timer-chip hidden" id="timer-chip" aria-live="off">
+          <span id="timer">15:00</span>
+          <span class="timer-label">REMAINING</span>
+        </div>
+        <button class="quiet-button" id="new-case" type="button">New case</button>
+      </div>
+    </header>
+
+    <main class="case-screen" id="case-screen">
+      <section class="minimal-card">
+        <p class="eyebrow">PATIENT FILE</p>
+        <div class="patient-summary">
+          <span class="patient-initials" id="patient-initials">—</span>
+          <div>
+            <h1 id="patient-name">Loading patient…</h1>
+            <p class="patient-meta"><span id="patient-age">—</span><span id="patient-sex">—</span></p>
+          </div>
+        </div>
+        <div class="file-section">
+          <h2>Reason for visit</h2>
+          <p id="reason-for-visit">Loading visit information…</p>
+        </div>
+        <div class="file-section">
+          <h2>Previous conditions</h2>
+          <ul id="previous-conditions"></ul>
+        </div>
+        <div class="file-footer">
+          <p>15 minutes with the patient. Allow microphone access to speak.</p>
+          <button class="primary-button" id="see-patient" type="button" disabled>See patient</button>
+        </div>
+      </section>
+    </main>
+
+    <main class="encounter-screen hidden" id="encounter-screen">
+      <section class="encounter-stage" id="encounter-stage">
+        <div class="encounter-patient-label">Patient: <strong id="encounter-title">—</strong></div>
+        <div class="waveform-wrap">
+          <canvas id="waveform-canvas" aria-hidden="true"></canvas>
+        </div>
+        <p id="speech-status" class="speech-status">Ready when you are</p>
+      </section>
+      <aside class="encounter-side">
+        <section class="notes-panel encounter-notes">
+          <label for="notes">Clinical notes</label>
+          <textarea id="notes" placeholder="Record symptoms, timeline, relevant history, and questions to follow up…"></textarea>
+        </section>
+        <button class="finish-button" id="diagnose-finish" type="button">Diagnose &amp; finish</button>
+      </aside>
+    </main>
+
+    <main class="diagnosis-screen hidden" id="diagnosis-screen">
+      <section class="minimal-card diagnosis-card">
+        <p class="eyebrow">CONSULTATION COMPLETE</p>
+        <h1>What is your diagnosis?</h1>
+        <form id="diagnosis-form">
+          <label for="diagnosis-input">Your diagnosis</label>
+          <textarea id="diagnosis-input" maxlength="500" placeholder="Enter your working diagnosis and a brief rationale…" required></textarea>
+          <button class="submit-button" id="diagnosis-button" type="submit">Finish with patient</button>
+        </form>
+        <div class="result hidden" id="result" aria-live="polite"></div>
+      </section>
+    </main>
+    <div class="toast hidden" id="toast" role="alert"></div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

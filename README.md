@@ -15,8 +15,9 @@ Requires Node.js 20.6 or newer.
 npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Model credentials are read
-by the server; never put provider keys in browser code or commit them.
+Open [http://localhost:3000](http://localhost:3000) to read about Ward, then
+select **Try it out** to open the simulator. Model credentials are read by the
+server; never put provider keys in browser code or commit them.
 `ANTHROPIC_API_KEY` and `DEEPGRAM_API_KEY` are both required for voice calls.
 The `start` script loads `.env.local`.
 
@@ -60,8 +61,7 @@ The `start` script loads `.env.local`.
 
 Voice calls require microphone permission and a browser that supports
 AudioWorklet. The microphone stream is active for the duration of the
-interview; use headphones to reduce audio feedback. Typed messages are also
-sent through the same Voice Agent session.
+interview; use headphones to reduce audio feedback.
 
 ## Interview flow
 
@@ -69,8 +69,7 @@ sent through the same Voice Agent session.
    conditions.
 2. Select **See patient** and allow microphone access to start the 15-minute
    voice encounter. Speak naturally; the patient responds aloud and can be
-   interrupted. You can also type a message into the composer. Keep private
-   notes alongside the interview.
+   interrupted. Keep private notes alongside the interview.
 3. Select **Diagnose & finish** (or wait for the timer) to enter a diagnosis and
    receive case feedback.
 
