@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f7f8" />
+    <title>Ward — Diagnostic training</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Ward home">
+        <span class="brand-mark">W</span>
+        <span>ward<span class="brand-dot">.</span></span>
+      </a>
+      <div class="topbar-meta"><span class="live-dot"></span> Training mode</div>
+      <button class="quiet-button" id="new-case" type="button">Restart interview</button>
+    </header>
+
+    <main class="layout">
+      <section class="interview-panel panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">PATIENT INTERVIEW</p>
+            <h1 id="case-title">Starting your case…</h1>
+          </div>
+          <span class="case-tag">CASE 01</span>
+        </div>
+
+        <div class="patient-card">
+          <div class="avatar" aria-hidden="true">JL</div>
+          <div class="patient-info">
+            <strong id="patient-name">Patient</strong>
+            <span id="patient-age">Interview in progress</span>
+          </div>
+          <div class="patient-status"><span class="live-dot"></span> Connected</div>
+        </div>
+
+        <div class="chat-log" id="chat-log" aria-live="polite" aria-label="Interview conversation"></div>
+        <div class="thinking hidden" id="thinking"><span></span><span></span><span></span><em>Patient is responding</em></div>
+
+        <form class="composer" id="chat-form">
+          <label class="sr-only" for="chat-input">Ask the patient a question</label>
+          <textarea id="chat-input" rows="1" maxlength="2000" placeholder="Ask the patient a question…" required></textarea>
+          <button class="send-button" id="send-button" type="submit" aria-label="Send message">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7" /></svg>
+          </button>
+        </form>
+        <div class="composer-hint">Press Enter to send <span>·</span> Shift + Enter for a new line</div>
+      </section>
+
+      <aside class="side-column">
+        <section class="notes-panel panel">
+          <div class="side-heading">
+            <div class="side-icon notes-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M7 4h10a2 2 0 0 1 2 2v14H5V6a2 2 0 0 1 2-2ZM8 9h8M8 13h8M8 17h5" /></svg>
+            </div>
+            <div><p class="eyebrow">YOUR WORKSPACE</p><h2>Clinical notes</h2></div>
+          </div>
+          <label class="sr-only" for="notes">Your clinical notes</label>
+          <textarea id="notes" placeholder="Record symptoms, timeline, relevant history, and questions to follow up…"></textarea>
+          <p class="notes-footnote">Private to your session. Notes are not shown to the patient.</p>
+        </section>
+
+        <section class="diagnosis-panel panel">
+          <div class="side-heading">
+            <div class="side-icon diagnosis-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18" /></svg>
+            </div>
+            <div><p class="eyebrow">FINAL STEP</p><h2>Your assessment</h2></div>
+          </div>
+          <form id="diagnosis-form">
+            <label for="diagnosis-input">Most likely diagnosis</label>
+            <input id="diagnosis-input" maxlength="500" placeholder="Enter your diagnosis…" required />
+            <button class="submit-button" id="diagnosis-button" type="submit">
+              Submit assessment
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7" /></svg>
+            </button>
+          </form>
+          <div class="result hidden" id="result" aria-live="polite"></div>
+        </section>
+
+        <p class="disclaimer">Educational simulation only · Not for clinical use</p>
+      </aside>
+    </main>
+    <div class="toast hidden" id="toast" role="alert"></div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

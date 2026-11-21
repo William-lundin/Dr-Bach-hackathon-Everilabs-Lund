@@ -1,0 +1,13 @@
+{
+  "name": "patient-diagnostic-simulator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-time patient interview and diagnostic training simulator",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
