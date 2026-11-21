@@ -77,12 +77,18 @@ async function handleRequest(request, response) {
   if (request.method === "POST" && url.pathname === "/api/sessions") {
     const caseData = getCase("migraine");
     const sessionId = randomUUID();
-    sessions.set(sessionId, { caseId: caseData.id, history: [] });
+    sessions.set(sessionId, {
+      caseId: caseData.id,
+      history: [{ role: "assistant", content: caseData.patient.opening }],
+    });
     sendJson(response, 201, {
       sessionId,
       patient: {
         name: caseData.patient.name,
         age: caseData.patient.age,
+        sex: caseData.patient.sex,
+        reasonForVisit: caseData.patient.reasonForVisit,
+        previousConditions: caseData.patient.previousConditions,
         opening: caseData.patient.opening,
       },
       caseTitle: caseData.title,
