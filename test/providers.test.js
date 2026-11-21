@@ -113,6 +113,7 @@ test("encounter grading sends notes and transcript and validates rubric scores",
         ANTHROPIC_API_KEY: "test-anthropic-key",
         ANTHROPIC_BASE_URL: undefined,
         PATIENT_CHAT_MODEL: undefined,
+        ANALYSIS_MODEL: undefined,
       },
       async () => {
         const result = await gradeEncounter(
@@ -135,6 +136,7 @@ test("encounter grading sends notes and transcript and validates rubric scores",
     );
     assert.equal(requestUrl, "https://api.anthropic.com/v1/messages");
     const body = JSON.parse(requestOptions.body);
+    assert.equal(body.model, "claude-sonnet-5-5");
     const submission = JSON.parse(body.messages[0].content);
     assert.equal(submission.submittedDiagnosis, "Migraine");
     assert.equal(submission.studentNotes, "Unilateral, throbbing; no sudden onset.");

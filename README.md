@@ -29,9 +29,9 @@ The `start` script loads `.env.local`.
   24 kHz patient audio back. Deepgram Flux models handle transcription and
   speech; the agent uses Anthropic as its reasoning provider. The default
   models are `flux-general-en`, `flux-alexis-en` (speed 1, expressivity 0),
-  and `claude-haiku-5-5`;
-  override them with `DEEPGRAM_STT_MODEL`, `DEEPGRAM_TTS_MODEL`, and
-  `PATIENT_CHAT_MODEL`.
+  and `claude-haiku-5-5` for the patient conversation. The final assessment
+  uses `claude-sonnet-5-5` by default. Override these with `DEEPGRAM_STT_MODEL`,
+  `DEEPGRAM_TTS_MODEL`, `PATIENT_CHAT_MODEL`, and `ANALYSIS_MODEL`.
 - **Patient role and continuity** — the server sends the selected case's full
   patient-role prompt to the Voice Agent and records recognized user and
   patient turns in the interview session. Generated profiles in
