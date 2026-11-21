@@ -54,6 +54,17 @@ SDK. Student dictation is provided by the Wispr Flow desktop application;
 there is no student-audio transcription API in the simulator. The UI and
 session API do not depend on a specific model vendor.
 
+## Interview flow
+
+1. Review the patient file: name, age, sex, reason for visit, and previous
+   conditions.
+2. Select **See patient** to start the 15-minute encounter. The simulated
+   patient is heard through generated speech; the conversation is not displayed
+   as text. Use Wispr Flow to dictate questions into the question field and
+   keep private notes alongside the interview.
+3. Select **Diagnose & finish** (or wait for the timer) to enter a diagnosis and
+   receive case feedback.
+
 ## Verify
 
 ```sh

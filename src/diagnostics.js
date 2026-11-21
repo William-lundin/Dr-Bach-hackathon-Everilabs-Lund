@@ -5,6 +5,12 @@ const cases = [
     patient: {
       name: "Jordan Lee",
       age: 24,
+      sex: "Female",
+      reasonForVisit: "A more severe headache than usual, beginning this morning.",
+      previousConditions: [
+        "Occasional similar headaches since late teens",
+        "No other known chronic conditions",
+      ],
       opening:
         "I've had this really bad headache since this morning. It feels worse than the headaches I usually get.",
       profile:
